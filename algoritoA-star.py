@@ -2,11 +2,13 @@ import pygame
 import math
 from queue import PriorityQueue
 
+pygame.init()
+
 # Configuración de ventana
 ANCHO = 800
 FILAS = 11
 VENTANA = pygame.display.set_mode((ANCHO, ANCHO))
-pygame.display.set_caption("A* Pathfinding con Pesos")
+pygame.display.set_caption("A* Pathfinding con Pesos Mejorado")
 
 # Colores
 BLANCO = (255, 255, 255)
@@ -29,6 +31,7 @@ class Nodo:
         self.ancho = ancho
         self.total_filas = total_filas
         self.vecinos = []
+        self.g = float("inf")
 
     def get_pos(self):
         return self.fila, self.col
@@ -44,6 +47,7 @@ class Nodo:
 
     def restablecer(self):
         self.color = BLANCO
+        self.g = float("inf")
 
     def hacer_inicio(self):
         self.color = NARANJA
@@ -65,13 +69,16 @@ class Nodo:
 
     def dibujar(self, ventana):
         pygame.draw.rect(ventana, self.color, (self.x, self.y, self.ancho, self.ancho))
+        if self.g != float("inf") and not self.es_pared():
+            font = pygame.font.SysFont(None, 20)
+            texto = font.render(str(self.g), True, NEGRO)
+            ventana.blit(texto, (self.x + 5, self.y + 5))
 
     def actualizar_vecinos(self, grid):
         self.vecinos = []
-        # Direcciones con pesos (adyacentes = 10, diagonales = 14)
         direcciones = [
-            (-1, 0, 10), (1, 0, 10), (0, -1, 10), (0, 1, 10),  # rectos
-            (-1, -1, 14), (-1, 1, 14), (1, -1, 14), (1, 1, 14)  # diagonales
+            (-1, 0, 10), (1, 0, 10), (0, -1, 10), (0, 1, 10),
+            (-1, -1, 14), (-1, 1, 14), (1, -1, 14), (1, 1, 14)
         ]
         for dx, dy, peso in direcciones:
             fila = self.fila + dx
@@ -84,11 +91,13 @@ class Nodo:
     def __lt__(self, otro):
         return False
 
-# Heurística (distancia Manhattan)
+# Heurística diagonal mejorada + penalización
 def h(p1, p2):
     x1, y1 = p1
     x2, y2 = p2
-    return abs(x1 - x2) + abs(y1 - y2)
+    dx = abs(x1 - x2)
+    dy = abs(y1 - y2)
+    return (10 * (dx + dy)) + (14 - 2 * 10) * min(dx, dy) + dx + dy
 
 # Reconstrucción del camino
 def reconstruir_camino(came_from, actual, dibujar):
@@ -106,6 +115,7 @@ def a_estrella(dibujar, grid, inicio, fin):
 
     g_score = {nodo: float("inf") for fila in grid for nodo in fila}
     g_score[inicio] = 0
+    inicio.g = 0
 
     f_score = {nodo: float("inf") for fila in grid for nodo in fila}
     f_score[inicio] = h(inicio.get_pos(), fin.get_pos())
@@ -132,6 +142,7 @@ def a_estrella(dibujar, grid, inicio, fin):
             if temp_g_score < g_score[vecino]:
                 came_from[vecino] = actual
                 g_score[vecino] = temp_g_score
+                vecino.g = temp_g_score
                 f_score[vecino] = temp_g_score + h(vecino.get_pos(), fin.get_pos())
                 if vecino not in abierta_hash:
                     contador += 1
@@ -195,7 +206,7 @@ def main(ventana, ancho):
             if evento.type == pygame.QUIT:
                 corriendo = False
 
-            if pygame.mouse.get_pressed()[0]:  # Clic izquierdo
+            if pygame.mouse.get_pressed()[0]:
                 pos = pygame.mouse.get_pos()
                 fila, col = obtener_click_pos(pos, FILAS, ancho)
                 nodo = grid[fila][col]
@@ -208,7 +219,7 @@ def main(ventana, ancho):
                 elif nodo != fin and nodo != inicio:
                     nodo.hacer_pared()
 
-            elif pygame.mouse.get_pressed()[2]:  # Clic derecho
+            elif pygame.mouse.get_pressed()[2]:
                 pos = pygame.mouse.get_pos()
                 fila, col = obtener_click_pos(pos, FILAS, ancho)
                 nodo = grid[fila][col]
