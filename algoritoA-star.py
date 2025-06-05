@@ -6,7 +6,7 @@ pygame.init()
 
 # Configuración de ventana
 ANCHO = 800
-FILAS = 11
+FILAS = 22
 VENTANA = pygame.display.set_mode((ANCHO, ANCHO))
 pygame.display.set_caption("A* Pathfinding con Pesos Mejorado")
 
